@@ -51,6 +51,7 @@
     cfgdir: "{{nginx_dir}}"
     logdir: "{{nginx_logdir}}"
     locations: "{{nginx_locations}}"
+    redirect_locations: "{{nginx_redirect_locations}}"
   notify: Restart_nginx.service
 
 - name: Template of server.conf

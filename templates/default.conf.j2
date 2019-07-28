@@ -36,6 +36,17 @@ server {
   }
 {% endfor %}
 
+{% for item in redirect_locations %}
+  location ^~ /{{item.service}}/ {
+{% for ref in item.referer %}
+    if ($http_referer ~ /{{ref}}/) {
+      return 301 $scheme://$http_host:$http_port/{{ref}}$request_uri;
+    }
+{% endfor %}
+    return 404;
+  }
+{% endfor %}
+
   location = /server-status {
     stub_status on;
     access_log off;
