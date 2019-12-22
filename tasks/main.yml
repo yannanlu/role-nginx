@@ -45,13 +45,14 @@
 - name: Template of default.conf
   template:
     src: default.conf.j2
-    dest: "{{nginx_dir}}/conf.d/default.conf"
+    dest: "{{nginx_dir}}/conf.d/{{nginx_server_name|default('default', true)}}.conf"
     mode: 0644
   vars:
     cfgdir: "{{nginx_dir}}"
     logdir: "{{nginx_logdir}}"
     locations: "{{nginx_locations}}"
     redirect_locations: "{{nginx_redirect_locations}}"
+    server_name: "{{nginx_server_name}}"
   notify: Restart_nginx.service
 
 - name: Template of server.conf

@@ -1,2 +1,3 @@
 # role-nginx
-Ansible role for Nginx
+
+Ansible role for Nginx with support on virtual hosts.

@@ -1,11 +1,15 @@
-log_format qb_standard  '[$time_local] $remote_addr $remote_user "$request" '
+log_format {{server_name|default('default', true)}}_standard  '[$time_local] $remote_addr $remote_user "$request" '
                           '$status $body_bytes_sent "$http_referer" '
                           '"$http_user_agent" "$http_host" D=${request_time}s';
 
 server {
+{% if server_name|length > 0 %}
+  listen 443 ssl;
+  server_name {{server_name}};
+{% else %}
   listen 443 ssl default_server;
-
   server_name _;
+{% endif %}
   server_tokens off;
 
   ssl_protocols TLSv1.2 TLSv1.1 TLSv1;
@@ -14,8 +18,8 @@ server {
 
   index index.html index.htm home.html;
 
-  access_log  {{logdir}}/default.access.log qb_standard;
-  error_log  {{logdir}}/default.error.log warn;
+  access_log  {{logdir}}/{{server_name|default('default', true)}}.access.log {{server_name|default('default', true)}}_standard;
+  error_log  {{logdir}}/{{server_name|default('default', true)}}.error.log warn;
 
   sendfile on;
   tcp_nopush on;
