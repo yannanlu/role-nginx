@@ -4,6 +4,24 @@
     name: "{{nginx_pkg_name}}"
     state: present
     update_cache: yes
+  when: ansible_distribution != 'RedHat'
+
+- name: Reset read permission on logdir
+  file:
+    path: "{{nginx_logdir}}"
+    state: directory
+    owner: "{{nginx_user}}"
+    group: "{{nginx_group}}"
+    mode: 0755
+
+- name: Create dir for document root
+  file:
+    path: "{{nginx_default_doc_root}}"
+    state: directory
+    owner: "{{nginx_user}}"
+    group: "{{nginx_group}}"
+    mode: 0755
+  when: nginx_default_doc_root|length > 0
 
 - name: Open the port 443
   iptables:
@@ -11,13 +29,15 @@
     destination_port: 443
     action: insert
     jump: ACCEPT
+    match: state
+    ctstate: NEW
     protocol: tcp
     state: present
   register: port_443_result
   when: common_iptables != 'disabled'
 
 - name: Save iptables
-  command: "/sbin/iptables-save"
+  shell: "/sbin/iptables-save > /etc/sysconfig/iptables"
   when: port_443_result is changed
 
 - name: Template of nginx.conf
@@ -42,40 +62,51 @@
     - server.key
   notify: Restart_nginx.service
 
+- name: Copy cert file for {{nginx_cert_file}}
+  copy:
+    src: "{{nginx_cert_file}}"
+    dest: "{{nginx_dir}}/"
+    mode: 0640
+  when: nginx_cert_file|length > 0
+  notify: Restart_nginx.service
+
+- name: Template of key file for {{nginx_cert_file}}
+  template:
+    src: "{{nginx_cert_file|replace('/files/', '/templates/')|replace('.crt', '.key')}}.j2"
+    dest: "{{nginx_dir}}/{{nginx_cert_file|basename|replace('.crt', '.key')}}"
+    mode: 0600
+  vars:
+    key_secret: "{{nginx_key_secret|replace('\n','')}}"
+  when: nginx_cert_file|length > 0
+  notify: Restart_nginx.service
+
 - name: Template of default.conf
   template:
     src: default.conf.j2
-    dest: "{{nginx_dir}}/conf.d/{{nginx_server_name|default('default', true)}}.conf"
+    dest: "{{nginx_dir}}/conf.d/default.conf"
     mode: 0644
   vars:
+    doc_root: "{{nginx_default_doc_root}}"
     cfgdir: "{{nginx_dir}}"
     logdir: "{{nginx_logdir}}"
-    locations: "{{nginx_locations}}"
-    redirect_locations: "{{nginx_redirect_locations}}"
-    server_name: "{{nginx_server_name}}"
+    cert_file: "{{nginx_cert_file|basename|default('server.crt', true)}}"
   notify: Restart_nginx.service
 
 - name: Template of server.conf
   template:
-    src: server.conf.j2
-    dest: "{{nginx_dir}}/conf.d/server.conf"
+    src: "{{nginx_conf_file|default('server.conf', true)}}.j2"
+    dest: "{{nginx_dir}}/conf.d/{{nginx_rolename}}.conf"
     mode: 0644
   vars:
-    port: "{{nginx_extra_server.port}}"
-    server_name: "{{nginx_extra_server.server_name}}"
-    docroot: "{{nginx_extra_server.docroot}}"
+    my_rolename: "{{nginx_rolename}}"
+    server_name: "{{nginx_server_name}}"
+    cfgdir: "{{nginx_dir}}"
     logdir: "{{nginx_logdir}}"
-    log_locations: "{{nginx_log_locations}}"
-  when: nginx_extra_server|length > 0
+    locations: "{{nginx_locations}}"
+    redirect_locations: "{{nginx_redirect_locations}}"
+    cert_file: "{{nginx_cert_file|basename|default('server.crt', true)}}"
+  when: nginx_rolename|length > 0
   notify: Restart_nginx.service
-
-- name: Set read permission on logdir
-  file:
-    path: "{{nginx_logdir}}"
-    state: directory
-    owner: "{{nginx_user}}"
-    group: "{{nginx_group}}"
-    mode: 0755
 
 - name: Get stats of monitrc
   stat:

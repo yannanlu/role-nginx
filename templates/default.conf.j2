@@ -1,25 +1,23 @@
-log_format {{server_name|default('default', true)}}_standard  '[$time_local] $remote_addr $remote_user "$request" '
-                          '$status $body_bytes_sent "$http_referer" '
-                          '"$http_user_agent" "$http_host" D=${request_time}s';
+log_format standard '[$time_local] $remote_addr $remote_user "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_host" D=${request_time}s';
 
 server {
-{% if server_name|length > 0 %}
-  listen 443 ssl;
-  server_name {{server_name}};
-{% else %}
   listen 443 ssl default_server;
   server_name _;
-{% endif %}
   server_tokens off;
 
   ssl_protocols TLSv1.2 TLSv1.1 TLSv1;
-  ssl_certificate {{cfgdir}}/server.crt;
-  ssl_certificate_key {{cfgdir}}/server.key;
+  ssl_certificate {{cfgdir}}/{{cert_file}};
+  ssl_certificate_key {{cfgdir}}/{{cert_file|replace('.crt', '.key')}};
 
+{% if doc_root|length > 0 %}
+  root {{doc_root}};
+{% endif %}
   index index.html index.htm home.html;
 
-  access_log  {{logdir}}/{{server_name|default('default', true)}}.access.log {{server_name|default('default', true)}}_standard;
-  error_log  {{logdir}}/{{server_name|default('default', true)}}.error.log warn;
+  access_log  {{logdir}}/default.access.log standard;
+  error_log  {{logdir}}/default.error.log warn;
 
   sendfile on;
   tcp_nopush on;
@@ -32,24 +30,6 @@ server {
   recursive_error_pages on;
 
   rewrite_log off;
-
-{% for item in locations %}
-  location ^~ /{{item.service}}/ {
-    proxy_pass {{item.proxy}};
-    expires {{item.expire}};
-  }
-{% endfor %}
-
-{% for item in redirect_locations %}
-  location ^~ /{{item.service}}/ {
-{% for ref in item.referer %}
-    if ($http_referer ~ /{{ref}}/) {
-      return 301 $scheme://$http_host:$http_port/{{ref}}$request_uri;
-    }
-{% endfor %}
-    return 404;
-  }
-{% endfor %}
 
   location = /server-status {
     stub_status on;

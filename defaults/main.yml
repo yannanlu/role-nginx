@@ -3,15 +3,17 @@ nginx_pkg_name: nginx
 nginx_dir: /etc/nginx
 nginx_logdir: /var/log/nginx
 nginx_pidfile: /var/run/nginx.pid
-nginx_default_docroot: /usr/share/nginx/html
+nginx_default_doc_root: /usr/share/nginx/html
+nginx_cert_file: ''
+nginx_key_secret: xxxx
+nginx_conf_file: ''
+nginx_rolename: ''
 nginx_server_name: ''
 
-nginx_pkg_version: "{{ '1.10.2-1.el7' if ansible_distribution in ['RedHat','CentOS'] else '1.10.3-0ubuntu0.16.04.2' }}"
+nginx_pkg_version: "{{ '1.16.1-1.el7' if ansible_distribution in ['RedHat','CentOS'] else '1.10.3-0ubuntu0.16.04.2' }}"
 nginx_user: "{{ 'nginx' if ansible_distribution in ['RedHat','CentOS'] else 'www-data' }}"
 nginx_group: "{{ 'nginx' if ansible_distribution in ['RedHat','CentOS'] else 'www-data' }}"
 
 nginx_locations: []
 nginx_redirect_locations: []
-
 nginx_extra_server: {}
-nginx_log_locations: []
